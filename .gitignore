@@ -96,3 +96,9 @@ venv.bak/
 *$py.class
 __pycache__/
 .python-version
+
+#local
+audios/
+summaries/
+testDownload.py
+testSummary.py

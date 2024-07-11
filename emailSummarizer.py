@@ -6,6 +6,8 @@ import logging
 import json
 import yaml
 import datetime
+from pydub import AudioSegment
+from openai import OpenAI
 from email import policy
 from email.parser import BytesParser
 from email.header import decode_header
@@ -77,14 +79,15 @@ def connect_to_gmail_imap(user, password):
     try:
         my_mail = imaplib.IMAP4_SSL(imap_url)
         my_mail.login(user, password)
-        my_mail.select('Inbox') #my_mail.select('All-Daily-read')
+        #my_mail.select('All-day') 
+        my_mail.select('All-Daily-read')
         logging.info("Connected to Gmail and selected Inbox successfully.")
         return my_mail
     except imaplib.IMAP4.error as e:
         logging.error("Error during IMAP login or Inbox selection: {}".format(e))
         raise
     except Exception as e:
-        logging.error("Unexpected error: {}".format(e))
+        logging.error("Unexpected error HERE: {}".format(e))
         raise
 
 
@@ -109,10 +112,10 @@ def get_emails_from_last_24h(mail):
         since_date = (now - datetime.timedelta(days=1)).strftime(date_format)
         before_date = now.strftime(date_format)
 
-        print("Since Date: ", since_date, "\n Before Date: ", before_date, )
+        print("Since Date: ", since_date, "\nBefore Date: ", before_date, )
 
         # Search for emails from the last 24 hours
-        result, data = mail.search(None, '(SINCE "{}" BEFORE "{}")'.format(since_date, before_date))
+        result, data = mail.search(None, '(SINCE "{}")'.format(before_date))
         
         if result == 'OK':
             email_list = []
@@ -190,7 +193,8 @@ def summarize_email(emails):
     # Attempt to summarize the email content
     # Define the prompt templates for summarization
     question_prompt_template = """
-    Please provide a summary of the following text in bullet points:
+    Imagine you are the CEO of a company and you need to read through the newletters in your inbox to stay update about market trends and businesses. 
+    Please provide an intelligent summary of the following text with key points that can be used to make informed decisions. Write in bullet points:
     TEXT: {text}
     SUMMARY:
     """.strip()
@@ -232,11 +236,41 @@ def summarize_email(emails):
         subject = email['subject']
         cleaned_content = clean_text(email['body'])
         summary = chain.invoke(cleaned_content)
-
-        summaries.append(f"From: {from_address}\nSubject: {subject}\nSummary:\n{summary["output_text"]}\n\n")
+        email_info = f"From: {from_address}\nSubject: {subject}\nSummary:\n{summary['output_text']}\n\n"
+        summaries.append(email_info)
+        text_to_speech(email_info)
     
-    with open('email_summaries{date}.txt', 'w') as f:
+    with open(f"email_summaries{date}.txt", 'w') as f:
         f.writelines(summaries)
+
+def text_to_speech(given_text):
+    client = OpenAI()
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input=given_text
+    )
+    temp_audio_path = "audios/temp.mp3"
+    response.stream_to_file(temp_audio_path)
+
+    # Load the newly generated audio
+    new_audio = AudioSegment.from_file(temp_audio_path)
+    output_file = "audios/combined_audio.mp3"
+
+    if os.path.exists(output_file):
+        # If the output file exists, load it and append the new audio
+        existing_audio = AudioSegment.from_file(output_file)
+        combined_audio = existing_audio + new_audio
+    else:
+        # If the output file does not exist, the new audio is the combined audio
+        combined_audio = new_audio
+
+    # Export the combined audio to the output file
+    combined_audio.export(output_file, format="mp3")
+
+    # Clean up temporary audio file
+    os.remove(temp_audio_path)
+
 
 
 def main():

@@ -1,0 +1,9 @@
+langchain==0.2.7
+langchain_community==0.2.7
+langchain_openai==0.1.15
+openai==0.28.0
+pandas==2.2.2
+pydub==0.25.1
+pyttsx3==2.90
+PyYAML==6.0.1
+tenacity==8.5.0
