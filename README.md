@@ -23,7 +23,7 @@ Before you begin, ensure you have the following installed on your local machine:
 1. Clone the repository:
     ```sh
     git clone https://github.com/your-username/email-fetcher.git
-    cd email-fetcher
+    cd Email-Sumamrizer
     ```
 
 2. Set up a virtual environment:
